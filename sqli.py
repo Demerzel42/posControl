@@ -1,37 +1,55 @@
-from flask import Flask, request
+from flask import Flask, request, render_template_string
 import sqlite3
 
 app = Flask(__name__)
 
-@app.route('/sqli/<id>', methods=['GET'])
-def do_sqli(id):
-    con_string = "I AM a connection String"  # Connection string placeholder
-    conn = None
-    result = ""
+# A simple HTML form
+HTML = '''
+    <html>
+        <head>
+            <title>Login</title>
+            <style>
+                body { font-family: Arial, sans-serif; }
+                .container { width: 300px; margin: auto; margin-top: 50px; }
+                input { margin-bottom: 10px; width: 100%; padding: 10px; }
+                button { width: 100%; padding: 10px; }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <h2>Login</h2>
+                <form method="post" action="/login">
+                    <input type="text" name="username" placeholder="Username">
+                    <input type="password" name="password" placeholder="Password">
+                    <button type="submit">Login</button>
+                </form>
+            </div>
+        </body>
+    </html>
+'''
 
-    try:
-        # Establishing a connection (using SQLite in this example)
-        conn = sqlite3.connect('example.db')  # Replace with your actual database connection
-        cursor = conn.cursor()
+@app.route('/')
+def home():
+    return HTML
 
-        # Vulnerable to SQL injection
-        query = "SELECT * FROM users WHERE userId = '" + id + "'"  # Noncompliant
-        cursor.execute(query)
+@app.route('/login', methods=['POST'])
+def login():
+    username = request.form['username']
+    password = request.form['password']
 
-        # Fetching the result
-        rows = cursor.fetchall()
-        for row in rows:
-            result += row[1]  # Assuming userName is the second column
+    # Unsafe SQL query
+    query = "SELECT * FROM users WHERE username = '{}' AND password = '{}'".format(username, password)
 
-    except Exception as e:
-        return f"Error: {e}"
-    finally:
-        if conn:
-            conn.close()
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()
+    conn.close()
 
-    return result
-
+    if result:
+        return "Welcome, {}!".format(username)
+    else:
+        return "Login failed!"
 
 if __name__ == '__main__':
-    app.run(debug=True)
-
+    app.run(debug=False)
