@@ -1,29 +1,35 @@
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
-namespace WebFox.Controllers
+namespace WebApp
 {
-    [Route("api/[controller]")]
-    [ApiController]
-    public class LogInjection : ControllerBase
+    public class LogInjectionExample
     {
-        private readonly ILogger<LogInjection> _logger;
+        private readonly ILogger<LogInjectionExample> _logger;
 
-
-        public LogInjection(ILogger<LogInjection> logger)
+        public LogInjectionExample(ILogger<LogInjectionExample> logger)
         {
             _logger = logger;
         }
 
-        [HttpGet("{userInfo}")]
-        public void injectLog(string userInfo)
+        public void LogUserInput(string userInput)
         {
-            _logger.LogError("error!! " + userInfo);
+            // Insecure: Logging user input without sanitization (Log Injection vulnerability)
+            _logger.LogInformation("User input received: {UserInput}", userInput);
+        }
+
+        public static void Main(string[] args)
+        {
+            // Setup logger
+            using var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+            ILogger<LogInjectionExample> logger = loggerFactory.CreateLogger<LogInjectionExample>();
+
+            var logExample = new LogInjectionExample(logger);
+            
+            // Simulate user input with log injection
+            string maliciousInput = "Normal input; DROP TABLE Users; --";  // Example of injected SQL statement or log manipulation
+            logExample.LogUserInput(maliciousInput);
         }
     }
 }
+
